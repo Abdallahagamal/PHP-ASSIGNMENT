@@ -1,0 +1,164 @@
+[
+  {
+    "messageId": "1-1",
+    "threadId": 1,
+    "type": "received",
+    "from": "Sarah Johnson",
+    "fromEmail": "sarah.johnson@acmecorp.com",
+    "fromInitials": "SJ",
+    "subject": "Integration API Documentation Request",
+    "body": "Hi team, I'm integrating our internal system with your API. Can you share complete auth and rate-limit documentation?",
+    "time": "2m ago",
+    "status": "New",
+    "assigned": "Unassigned",
+    "thread": [
+      {"from": "Sarah Johnson", "body": "Hi team, I'm integrating our internal system with your API. Can you share complete auth and rate-limit documentation?", "time": "2m ago"},
+      {"from": "Support", "body": "Sure, we can help with that. Are you using API keys only or OAuth as well?", "time": "1m ago"},
+      {"from": "Sarah Johnson", "body": "We are using API keys for now, but OAuth support next quarter would be ideal.", "time": "Just now"}
+    ]
+  },
+  {
+    "messageId": "2-1",
+    "threadId": 2,
+    "type": "received",
+    "from": "Mike Chen",
+    "fromEmail": "mchen@techstartup.io",
+    "fromInitials": "MC",
+    "subject": "Enterprise Plan Pricing Inquiry",
+    "body": "We're evaluating your enterprise plan for 50+ users. Could you share annual pricing and onboarding support details?",
+    "time": "10m ago",
+    "status": "Open",
+    "assigned": "John Smith",
+    "thread": [
+      {"from": "Mike Chen", "body": "We're evaluating your enterprise plan for 50+ users. Could you share annual pricing and onboarding support details?", "time": "10m ago"},
+      {"from": "Sales", "body": "Absolutely. We have tiered pricing and migration support. Do you prefer monthly or annual billing?", "time": "8m ago"},
+      {"from": "Mike Chen", "body": "Annual billing is preferred if discount is available.", "time": "6m ago"},
+      {"from": "Sales", "body": "Great, we can provide a 15% annual discount at your seat count.", "time": "4m ago"},
+      {"from": "Mike Chen", "body": "Please send a formal quote and MSA draft for legal review.", "time": "2m ago"}
+    ]
+  },
+  {
+    "messageId": "3-1",
+    "threadId": 3,
+    "type": "received",
+    "from": "Lisa Rodriguez",
+    "fromEmail": "l.rodriguez@manufacturing.com",
+    "fromInitials": "LR",
+    "subject": "Billing Issue - Duplicate Charges",
+    "body": "I noticed duplicate charges on our account statement for April. Could you verify and issue a correction?",
+    "time": "30m ago",
+    "status": "Replied",
+    "assigned": "Emma Davis",
+    "thread": [
+      {"from": "Lisa Rodriguez", "body": "I noticed duplicate charges on our account statement for April. Could you verify and issue a correction?", "time": "30m ago"},
+      {"from": "Billing", "body": "Thanks for flagging this. We identified one duplicate invoice and started a refund workflow.", "time": "24m ago"}
+    ]
+  },
+  {
+    "messageId": "4-1",
+    "threadId": 4,
+    "type": "received",
+    "from": "David Kim",
+    "fromEmail": "dkim@retailchain.com",
+    "fromInitials": "DK",
+    "subject": "Demo Request for Inventory Management",
+    "body": "We need a demo focused on multi-branch stock visibility and low-inventory alerts.",
+    "time": "1h ago",
+    "status": "Won",
+    "assigned": "John Smith",
+    "thread": [
+      {"from": "David Kim", "body": "We need a demo focused on multi-branch stock visibility and low-inventory alerts.", "time": "1h ago"},
+      {"from": "Sales", "body": "Happy to arrange that. Would next Tuesday work for your operations and finance leads?", "time": "55m ago"},
+      {"from": "David Kim", "body": "Yes, Tuesday works. Please include POS sync in the demo agenda.", "time": "49m ago"},
+      {"from": "Sales", "body": "Noted. We will include POS sync, purchase order flow, and warehouse transfers.", "time": "43m ago"},
+      {"from": "David Kim", "body": "Great. Can you also share case studies from similar retail chains?", "time": "35m ago"},
+      {"from": "Sales", "body": "Of course. Attaching two implementation summaries with ROI metrics.", "time": "27m ago"},
+      {"from": "David Kim", "body": "Thanks. We are ready to proceed after procurement sign-off.", "time": "20m ago"}
+    ]
+  },
+  {
+    "messageId": "5-1",
+    "threadId": 5,
+    "type": "received",
+    "from": "Jennifer Taylor",
+    "fromEmail": "jtaylor@healthsys.org",
+    "fromInitials": "JT",
+    "subject": "Data Security Compliance Questions",
+    "body": "Can you confirm HIPAA alignment, data residency options, and encryption standards for PHI?",
+    "time": "3h ago",
+    "status": "Pending",
+    "assigned": "Alex Turner",
+    "thread": [
+      {"from": "Jennifer Taylor", "body": "Can you confirm HIPAA alignment, data residency options, and encryption standards for PHI?", "time": "3h ago"},
+      {"from": "Security Team", "body": "We support HIPAA-aligned controls, AES-256 at rest, and TLS 1.2+ in transit.", "time": "2h ago"},
+      {"from": "Jennifer Taylor", "body": "Do you provide a signed BAA and annual penetration testing reports?", "time": "90m ago"},
+      {"from": "Security Team", "body": "Yes. BAA is available for enterprise plans and we can share the latest test summary under NDA.", "time": "75m ago"}
+    ]
+  },
+  {
+    "messageId": "6-1",
+    "threadId": 6,
+    "type": "received",
+    "from": "Robert Blake",
+    "fromEmail": "r.blake@fintech.com",
+    "fromInitials": "RB",
+    "subject": "Feature Request: Bulk Email Export",
+    "body": "Our support team needs CSV export for conversation history with filters by date and assignee.",
+    "time": "5h ago",
+    "status": "Open",
+    "assigned": "Emma Davis",
+    "thread": [
+      {"from": "Robert Blake", "body": "Our support team needs CSV export for conversation history with filters by date and assignee.", "time": "5h ago"},
+      {"from": "Product Team", "body": "Thanks for the request. We are validating scope and expected to include this in the next release planning cycle.", "time": "4h ago"}
+    ]
+  },
+  {
+    "messageId": "sent-1",
+    "threadId": 101,
+    "type": "sent",
+    "to": "Alice Smith",
+    "toEmail": "alice.smith@example.com",
+    "toInitials": "AS",
+    "subject": "Follow up on Project Timeline",
+    "body": "Hi Alice, wanted to check in on the project timeline we discussed last week. Are we still on track for the April 30th deadline?",
+    "time": "45m ago",
+    "status": "Replied",
+    "assigned": "You",
+    "thread": [
+      {"from": "Me", "body": "Hi Alice, wanted to check in on the project timeline we discussed last week. Are we still on track for the April 30th deadline?", "time": "45m ago"},
+      {"from": "Alice Smith", "body": "Yes, we are on schedule. QA testing starts next week.", "time": "40m ago"}
+    ]
+  },
+  {
+    "messageId": "sent-2",
+    "threadId": 102,
+    "type": "sent",
+    "to": "Bob Johnson",
+    "toEmail": "bob.johnson@company.com",
+    "toInitials": "BJ",
+    "subject": "Design Review Meeting Notes",
+    "body": "Please find the design review notes from today's meeting. The team agreed on the new dashboard layout. Next steps: dev implementation and QA planning.",
+    "time": "1h ago",
+    "status": "New",
+    "assigned": "You",
+    "thread": [
+      {"from": "Me", "body": "Please find the design review notes from today's meeting. The team agreed on the new dashboard layout. Next steps: dev implementation and QA planning.", "time": "1h ago"}
+    ]
+  },
+  {
+    "messageId": "sent-3",
+    "threadId": 103,
+    "type": "sent",
+    "to": "Carol White",
+    "toEmail": "carol.white@partner.org",
+    "toInitials": "CW",
+    "subject": "Partnership Proposal",
+    "body": "I'm excited to share our partnership proposal with you. This collaboration aligns perfectly with our strategic goals. Let me know your thoughts and availability for a call.",
+    "time": "2h ago",
+    "status": "Pending",
+    "assigned": "You",
+    "thread": [
+      {"from": "Me", "body": "I'm excited to share our partnership proposal with you. This collaboration aligns perfectly with our strategic goals. Let me know your thoughts and availability for a call.", "time": "2h ago"}
+    ]
+  }
+]
