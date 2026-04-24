@@ -2,47 +2,128 @@
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 @include 'Upload.php';
 $conn = new mysqli("localhost","root","","email_db");
-$sender_id = $_SESSION['user_id'];
+if ($conn->connect_error) {
+    echo json_encode(["message" => "Database connection failed: " . $conn->connect_error]);
+    exit;
+}
+$sender_id = $_SESSION['user_id'] ?? null;
 
 
 
 // ADD
-if($_GET['action'] == "add"){
-     
-    $receiver_email = $_POST['composeEmail'];
-    $subject = $_POST['composeSubject'];
-    $message = $_POST['composeBody'];
-    // $attachment = $_POST['attachment'];
-// validation
-    // if(empty($sender_id) || empty($receiver_email)  || empty($message)){
-        
-    //     exit;
-    // }
+if(isset($_GET['action']) && $_GET['action'] === "add"){
+    $input = json_decode(file_get_contents('php://input'), true);
+    $receiver_email = trim($input['composeEmail'] ?? '');
+    $subject = trim($input['composeSubject'] ?? '');
+    $message = trim($input['composeBody'] ?? '');
+
+    $missing = [];
+    if(empty($sender_id)) $missing[] = 'sender_id';
+    if(empty($receiver_email)) $missing[] = 'receiver_email';
+    if(empty($subject)) $missing[] = 'subject';
+    if(empty($message)) $missing[] = 'message';
+    if(!empty($missing)){
+        echo json_encode(["message" => "Missing required fields: " . implode(', ', $missing)]);
+        exit;
+    }
 
    //make sure receiver email is valid and exist in users table
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email=?");
-        $stmt->bind_param("s",$receiver_email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if($result->num_rows == 0){
-            echo json_encode(["message"=>"Receiver email not found"]);
-            exit;
-        }
-
-      
-    $stmt = $conn->prepare("
-    $user2_id = SELECT userID FROM users WHERE email='$receiver_email'
-    INSERT INTO CHATS(user1_id,user2_id,created_at)
-    VALUES ($sender_id,$user2_id,NOW())
-    $chat_id = SELECT id FROM CHATS WHERE user1_id=$sender_id AND user2_id=$user2_id AND created_at=NOW()
-    INSERT INTO emails(chat_id,sender_id,user2_id,subject,message,created_at)
-    VALUES ($chat_id,$sender_id,$user2_id,$subject,$message,NOW())
-    ");
-
-    $stmt->bind_param("isss",$sender_id,$receiver_email,$subject,$message);
+    $stmt = $conn->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)");
+    $stmt->bind_param("s", $receiver_email);
     $stmt->execute();
+    $result = $stmt->get_result();
+ 
+    if($result->num_rows === 0){
+        echo json_encode(["message" => "Receiver email not found: " . $receiver_email]);
+        exit;
+    }
 
-    echo json_encode(["message"=>"Email added"]);
+    $receiver = $result->fetch_assoc();
+    $receiver_id = (int) $receiver['id'];
+
+
+    if (!$conn->begin_transaction()) {
+        echo json_encode(["message" => "Failed to start transaction"]);
+        exit;
+    }
+
+    // Always create a new chat for each email
+    $stmt = $conn->prepare("INSERT INTO chats (user1_id, user2_id, created_at) VALUES (?, ?, NOW())");
+    if (!$stmt) {
+        $conn->rollback();
+        echo json_encode(["message" => "Prepare failed: " . $conn->error]);
+        exit;
+    }
+    $stmt->bind_param("ii", $sender_id, $receiver_id);
+    if (!$stmt->execute()) {
+        $conn->rollback();
+        echo json_encode(["message" => "Execute failed: " . $stmt->error]);
+        exit;
+    }
+    $chat_id = $conn->insert_id;
+
+    $stmt = $conn->prepare("INSERT INTO emails (chat_id, sender_id, subject, message, sent_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->bind_param("iiss", $chat_id, $sender_id, $subject, $message);
+    if (!$stmt) {
+        $conn->rollback();
+        echo json_encode(["message" => "Prepare failed: " . $conn->error]);
+        exit;
+    }
+    if (!$stmt->execute()) {
+        $conn->rollback();
+        echo json_encode(["message" => "Execute failed: " . $stmt->error]);
+        exit;
+    }
+
+    if (!$conn->commit()) {
+        echo json_encode(["message" => "Commit failed: " . $conn->error]);
+        exit;
+    }
+    echo json_encode(["message" => "Email added", "chat_id" => $chat_id]);
+    
+}
+
+// UPDATE (for replies)
+if(isset($_GET['action']) && $_GET['action'] === "update"){
+    $input = json_decode(file_get_contents('php://input'), true);
+    $chat_id = (int) ($input['chat_id'] ?? 0);
+    $message = trim($input['message'] ?? '');
+
+    if(empty($sender_id) || empty($chat_id) || empty($message)){
+        echo json_encode(["message" => "Missing required fields"]);
+        exit;
+    }
+
+    // Check if chat exists and user is part of it
+    $stmt = $conn->prepare("SELECT id FROM chats WHERE id = ? AND (user1_id = ? OR user2_id = ?)");
+    $stmt->bind_param("iii", $chat_id, $sender_id, $sender_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($result->num_rows === 0){
+        echo json_encode(["message" => "Chat not found or access denied"]);
+        exit;
+    }
+
+    // Get subject from the first email in the chat
+    $stmt = $conn->prepare("SELECT subject FROM emails WHERE chat_id = ? ORDER BY sent_at ASC LIMIT 1");
+    $stmt->bind_param("i", $chat_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $subject = '';
+    if($result->num_rows > 0){
+        $row = $result->fetch_assoc();
+        $subject = $row['subject'];
+    }
+
+    // Insert the reply
+    $stmt = $conn->prepare("INSERT INTO emails (chat_id, sender_id, subject, message, sent_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->bind_param("iiss", $chat_id, $sender_id, $subject, $message);
+    if (!$stmt->execute()) {
+        echo json_encode(["message" => "Failed to add reply: " . $stmt->error]);
+        exit;
+    }
+
+    echo json_encode(["message" => "Reply added"]);
 }
 
 // READ
@@ -84,28 +165,45 @@ if(isset($_GET['action']) && $_GET['action'] == "read"){
 }
 
 // DELETE
-if($_GET['action'] == "delete"){
-    $id = $_GET['id'];
+if(isset($_GET['action']) && $_GET['action'] === "delete"){
+    $ids = explode(',', $_GET['id']);
+    $deleted_count = 0;
+    $chats_to_delete = [];
 
-    $stmt = $conn->prepare("DELETE FROM emails WHERE id=?");
-    $stmt->bind_param("i",$id);
-    $stmt->execute();
+    foreach($ids as $id){
+        $id = (int) trim($id);
+        if($id <= 0) continue;
 
-    echo json_encode(["message"=>"Deleted"]);
+        // Get chat_id for this email
+        $stmt = $conn->prepare("SELECT chat_id FROM emails WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if($result->num_rows > 0){
+            $row = $result->fetch_assoc();
+            $chat_id = (int) $row['chat_id'];
+            $chats_to_delete[] = $chat_id;
+        }
+    }
+
+    // Remove duplicates
+    $chats_to_delete = array_unique($chats_to_delete);
+
+    foreach($chats_to_delete as $chat_id){
+        // Delete all emails in this chat
+        $stmt = $conn->prepare("DELETE FROM emails WHERE chat_id = ?");
+        $stmt->bind_param("i", $chat_id);
+        $stmt->execute();
+        $deleted_count += $stmt->affected_rows;
+
+        // Delete the chat
+        $stmt = $conn->prepare("DELETE FROM chats WHERE id = ?");
+        $stmt->bind_param("i", $chat_id);
+        $stmt->execute();
+    }
+
+    echo json_encode(["message" => "Deleted $deleted_count messages and associated chats"]);
 }
 
-// UPDATE
-if($_GET['action'] == "update"){
-    $id = $_POST['id'];
-    $sender = 'mohamedahmedhamed500@gmail.com';
-    $receiver = $_POST['composeEmail'];
-    $subject = $_POST['composeSubject'];
-    $message = $_POST['composeBody'];
-    $attachment = $_POST['attachment'];
-    $stmt = $conn->prepare("UPDATE emails SET sender=?, receiver=?, subject=?, message=? WHERE id=?");
-    $stmt->bind_param("ssssi",$sender,$receiver,$subject,$message,$id);
-    $stmt->execute();
 
-    echo json_encode(["message"=>"Updated"]);
-}
 ?>

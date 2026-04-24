@@ -253,17 +253,17 @@ $avatarColors = [
                 
                 <div>
                     <label for="composeEmail" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">To</label>
-                    <input id="composeEmail" type="email" required placeholder="name@example.com" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-400">
+                    <input id="composeEmail" name="composeEmail" type="email" required placeholder="name@example.com" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-400">
                 </div>
 
                 <div>
                     <label for="composeSubject" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</label>
-                    <input id="composeSubject" type="text" required placeholder="Write subject" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-400">
+                    <input id="composeSubject" name="composeSubject" type="text" required placeholder="Write subject" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-400">
                 </div>
 
                 <div>
                     <label for="composeBody" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Message</label>
-                    <textarea id="composeBody" rows="6" required placeholder="Write your message..." class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm leading-6 text-slate-700 outline-none focus:border-slate-400"></textarea>
+                    <textarea id="composeBody" name="composeBody" rows="6" required placeholder="Write your message..." class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm leading-6 text-slate-700 outline-none focus:border-slate-400"></textarea>
                 </div>
 
                 <div class="flex items-center justify-between pt-1">

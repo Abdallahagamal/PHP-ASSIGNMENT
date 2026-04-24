@@ -375,6 +375,23 @@ function sendReply(event) {
     renderThreadMessages(message);
     input.value = '';
     input.focus();
+
+    // Send to server
+    fetch("DB_Ops.php?action=update", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            chat_id: activeThreadId,
+            message: messageBody
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message !== "Reply added") {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(console.error);
 }
 
 // Marks the clicked sidebar link as active.
@@ -389,11 +406,16 @@ function setActive(el) {
 document.getElementById("composeForm").addEventListener("submit", function(e){
     e.preventDefault();
 
-    let formData = new FormData(this);
+    let data = {
+        composeEmail: document.getElementById('composeEmail').value,
+        composeSubject: document.getElementById('composeSubject').value,
+        composeBody: document.getElementById('composeBody').value
+    };
 
     fetch("DB_Ops.php?action=add", {
         method: "POST",
-        body: formData
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
     })
     .then(res => res.json())
     .then(data => {
@@ -409,6 +431,30 @@ document.getElementById("composeForm").addEventListener("submit", function(e){
 document.addEventListener('DOMContentLoaded', () => {
     updateFilteredView();
     updateBulkBar();
+
+    // Delete selected messages
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            if (selectedRows.size === 0) {
+                alert('No messages selected');
+                return;
+            }
+            const ids = Array.from(selectedRows).join(',');
+            fetch(`DB_Ops.php?action=delete&id=${ids}`)
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    selectedRows.clear();
+                    updateFilteredView();
+                    updateBulkBar();
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert('Error: ' + error.message);
+                });
+        });
+    }
 
     const dialog = document.getElementById('messageDialog');
     if (dialog) {
