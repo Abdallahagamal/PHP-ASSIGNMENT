@@ -1,12 +1,79 @@
 <?php
-// Load dummy inbox data from JSON to keep data separate from UI markup.
-$dataFile = __DIR__ . '/data/emails.json';
-$emailsJson = @file_get_contents($dataFile);
-$emails = json_decode($emailsJson ?: '[]', true);
-
-if (!is_array($emails)) {
-    $emails = [];
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
 }
+
+// Connect with DB_Ops.php to get real CRUD emails using PHP output buffering
+$emails = [];
+$_GET['action'] = 'read';
+ob_start();
+include __DIR__ . '/DB_Ops.php';
+$response = ob_get_clean();
+
+$rawData = json_decode($response, true) ?: [];
+
+// Helper for initials
+function getInitials($name) {
+    if (!$name) return '?';
+    $words = explode(" ", $name);
+    $initials = "";
+    foreach ($words as $w) {
+        $initials .= mb_substr($w, 0, 1);
+    }
+    return strtoupper(substr($initials, 0, 2));
+}
+
+$user_id = $_SESSION['user_id'];
+$my_name = $_SESSION['user_name'] ?? 'You';
+$my_email = $_SESSION['user_email'] ?? '';
+
+$chats_map = [];
+
+foreach ($rawData as $row) {
+    // Determine type: If the sender's email matches my email, I sent it.
+    $isSent = ($row['sender_email'] == $my_email);
+    
+    // DB_Ops now properly pulls the recipient via LEFT JOIN
+    $other_name = $isSent ? ($row['recipient_name'] ?? 'Recipient') : $row['sender_name'];
+    $other_email = $isSent ? ($row['recipient_email'] ?? '') : $row['sender_email'];
+
+    $chat_id = $row['chat_id'];
+
+    // Construct the individual message bubble for the thread view
+    $threadMessage = [
+        'from' => $isSent ? 'You' : $row['sender_name'],
+        'body' => $row['message'],
+        'time' => date('b d, h:i A', strtotime($row['sent_at']))
+    ];
+
+    if (!isset($chats_map[$chat_id])) {
+        // First time seeing this chat (this is the most recent message because of DESC)
+        $chats_map[$chat_id] = [
+            'messageId' => $row['id'],
+            'threadId' => $chat_id,
+            'type' => $isSent ? 'sent' : 'received',
+            'from' => $isSent ? $my_name : $row['sender_name'],
+            'fromEmail' => $isSent ? $my_email : $row['sender_email'],
+            'fromInitials' => getInitials($isSent ? $my_name : $row['sender_name']),
+            'to' => $isSent ? $other_name : $my_name,
+            'toEmail' => $isSent ? $other_email : $my_email,
+            'toInitials' => getInitials($isSent ? $other_name : $my_name),
+            'subject' => $row['subject'],
+            'body' => $row['message'],  // Latest message preview
+            'time' => date('b d, h:i A', strtotime($row['sent_at'])),
+            'status' => 'New',
+            'thread' => []
+        ];
+    }
+
+    // Because the query returns newest first, we unshift to stack older messages at the top of the thread array
+    array_unshift($chats_map[$chat_id]['thread'], $threadMessage);
+}
+
+// Convert map back into a flat array for the UI loop
+$emails = array_values($chats_map);
 // DON'T REMOVE
 // Status-to-badge style mapping for consistent label colors.
 $statusStyles = [
@@ -74,16 +141,6 @@ $avatarColors = [
                     class="rounded-lg border border-slate-200 pl-8 pr-4 py-2 text-sm text-slate-600 placeholder-slate-400 outline-none focus:border-blue-300 w-64 transition-colors"
                     oninput="filterTable()">
             </div>
-            <select id="statusFilter" onchange="filterTable()"
-                class="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 outline-none focus:border-blue-300 bg-white cursor-pointer">
-                <option value="">All Status</option>
-                <option value="new">New</option>
-                <option value="open">Open</option>
-                <option value="replied">Replied</option>
-                <option value="won">Won</option>
-                <option value="pending">Pending</option>
-            </select>
-        
         </div>
 
         <!-- Scrollable conversation table -->
@@ -95,9 +152,8 @@ $avatarColors = [
                         <th class="w-10 px-4 py-3 text-left">
                             <input type="checkbox" class="check-row rounded" onchange="toggleAll(this)">
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-40">From</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-40">Contact</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider flex-1 w-0">Subject & Message</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-20">Status</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-24">Time</th>
                     </tr>
                 </thead>
@@ -106,14 +162,16 @@ $avatarColors = [
                     <?php foreach ($emails as $index => $message): ?>
                         <?php
                         // Fallbacks protect UI if a status key is missing.
-                        $statusClass = $statusStyles[$message['status']] ?? 'bg-slate-100 text-slate-500 border border-slate-200';
                         $avatarClass = $avatarColors[$index % count($avatarColors)];
-                        // Determine contact info based on message type (sent vs received)
+                        // Always show the OTHER person as the contact
                         $isSent = ($message['type'] ?? 'received') === 'sent';
                         $contactName = $isSent ? ($message['to'] ?? '') : ($message['from'] ?? '');
                         $contactEmail = $isSent ? ($message['toEmail'] ?? '') : ($message['fromEmail'] ?? '');
                         $contactInitials = $isSent ? ($message['toInitials'] ?? '') : ($message['fromInitials'] ?? '');
-                        $contactLabel = $isSent ? 'To' : 'From';
+                        
+                        // Create a Whatsapp-style preview
+                        $previewPrefix = $isSent ? '<span class="text-slate-400 font-medium">You: </span>' : '';
+                        $previewBody = (strlen($message['body']) > 60) ? (substr($message['body'], 0, 60) . '...') : $message['body'];
                         ?>
                         <tr class="row-hover border-b border-slate-100 cursor-pointer transition-colors hover:bg-slate-50"
                             data-id="<?php echo htmlspecialchars($message['messageId'], ENT_QUOTES, 'UTF-8'); ?>"
@@ -137,7 +195,6 @@ $avatarColors = [
                                     </div>
                                     <div class="min-w-0">
                                         <div class="flex items-center gap-1">
-                                            <span class="text-xs font-semibold text-slate-500 uppercase"><?php echo $contactLabel; ?></span>
                                             <span class="font-medium text-slate-800 text-sm truncate"><?php echo htmlspecialchars($contactName, ENT_QUOTES, 'UTF-8'); ?></span>
                                         </div>
                                         <div class="text-xs text-slate-400 truncate"><?php echo htmlspecialchars($contactEmail, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -145,15 +202,10 @@ $avatarColors = [
                                 </div>
                             </td>
 
-                            <!-- Subject and message body preview combined -->
+                            <!-- Message body preview combined -->
                             <td class="px-4 py-4 flex-1">
                                 <div class="font-medium text-slate-800 text-sm truncate mb-1"><?php echo htmlspecialchars($message['subject'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                <div class="text-xs text-slate-500 truncate"><?php echo htmlspecialchars((strlen($message['body']) > 60) ? (substr($message['body'], 0, 60) . '...') : $message['body'], ENT_QUOTES, 'UTF-8'); ?></div>
-                            </td>
-
-                            <!-- Message status badge -->
-                            <td class="px-4 py-4 w-20">
-                                <span class="inline-block rounded-md px-2.5 py-1 text-xs font-medium <?php echo $statusClass; ?>"><?php echo htmlspecialchars($message['status'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <div class="text-sm text-slate-600 truncate"><?php echo $previewPrefix . htmlspecialchars($previewBody, ENT_QUOTES, 'UTF-8'); ?></div>
                             </td>
 
                             <!-- Time received -->
@@ -197,7 +249,7 @@ $avatarColors = [
                 <button type="button" onclick="closeComposeModal()" class="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">Close</button>
             </div>
 
-            <form id="composeForm" class="space-y-3 px-4 py-4" onsubmit="sendCompose(event)">
+            <form id="composeForm" class="space-y-3 px-4 py-4">
                 
                 <div>
                     <label for="composeEmail" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">To</label>

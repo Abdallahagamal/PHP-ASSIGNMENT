@@ -57,12 +57,10 @@ function filterTable() {
         const rowFrom = row.dataset.from || '';
         const rowSubject = row.dataset.subject || '';
         const rowBody = row.dataset.body || '';
-        const rowStatus = row.dataset.status || '';
 
         const matchSearch = !search || rowFrom.includes(search) || rowSubject.includes(search) || rowBody.includes(search);
-        const matchStatus = !status || rowStatus === status;
 
-        row.style.display = (matchSearch && matchStatus) ? '' : 'none';
+        row.style.display = matchSearch ? '' : 'none';
     });
 
     updateFilteredView();
@@ -313,7 +311,6 @@ function sendCompose(event) {
         <tr class="row-hover border-b border-slate-100 cursor-pointer transition-colors hover:bg-slate-50"
             data-id="${safeMessageId}"
             data-thread-id="${threadId}"
-            data-status="new"
             data-subject="${escapeHtml(subject.toLowerCase())}"
             data-from="${escapeHtml(toName.toLowerCase())}"
             data-body="${escapeHtml(body.toLowerCase())}"
@@ -328,7 +325,6 @@ function sendCompose(event) {
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-1">
-                            <span class="text-xs font-semibold text-slate-500 uppercase">To</span>
                             <span class="font-medium text-slate-800 text-sm truncate">${escapeHtml(toName)}</span>
                         </div>
                         <div class="text-xs text-slate-400 truncate">${escapeHtml(toEmail)}</div>
@@ -337,10 +333,7 @@ function sendCompose(event) {
             </td>
             <td class="px-4 py-4 flex-1">
                 <div class="font-medium text-slate-800 text-sm truncate mb-1">${escapeHtml(subject)}</div>
-                <div class="text-xs text-slate-500 truncate">${escapeHtml(renderPreview(body))}</div>
-            </td>
-            <td class="px-4 py-4 w-20">
-                <span class="inline-block rounded-md px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">New</span>
+                <div class="text-sm text-slate-600 truncate"><span class="text-slate-400 font-medium">You: </span>${escapeHtml(renderPreview(body))}</div>
             </td>
             <td class="px-4 py-4 w-24">
                 <span class="text-xs text-slate-400">${escapeHtml(time)}</span>
@@ -389,6 +382,29 @@ function setActive(el) {
     document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
     el.classList.add('active');
 }
+
+
+
+
+document.getElementById("composeForm").addEventListener("submit", function(e){
+    e.preventDefault();
+
+    let formData = new FormData(this);
+
+    fetch("DB_Ops.php?action=add", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log(data);
+        alert(data.message);
+        closeComposeModal();
+    })
+    .catch(console.error);
+});
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
     updateFilteredView();
