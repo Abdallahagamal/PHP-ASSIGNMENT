@@ -1,7 +1,7 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 @include 'Upload.php';
-$conn = new mysqli("localhost","root","","email_db");
+$conn = new mysqli("sql113.infinityfree.com","if0_41747456","ryH6NrJNuBGHCR","if0_41747456_email_db");
 if ($conn->connect_error) {
     echo json_encode(["message" => "Database connection failed: " . $conn->connect_error]);
     exit;
@@ -40,6 +40,7 @@ if(isset($_GET['action']) && $_GET['action'] === "add"){
 
     $receiver = $result->fetch_assoc();
     $receiver_id = (int) $receiver['id'];
+    $receiver_name = $receiver['name'] ?? $receiver_email; // Fallback to email if no name
 
 
     if (!$conn->begin_transaction()) {
@@ -74,12 +75,13 @@ if(isset($_GET['action']) && $_GET['action'] === "add"){
         echo json_encode(["message" => "Execute failed: " . $stmt->error]);
         exit;
     }
+    $email_id = $conn->insert_id;
 
     if (!$conn->commit()) {
         echo json_encode(["message" => "Commit failed: " . $conn->error]);
         exit;
     }
-    echo json_encode(["message" => "Email added", "chat_id" => $chat_id]);
+    echo json_encode(["message" => "Email added", "chat_id" => $chat_id, "email_id" => $email_id, "receiver_name" => $receiver_name]);
     
 }
 

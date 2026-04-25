@@ -11,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'] ?? '';
 
     if (!empty($email) && !empty($password)) {
-        $conn = new mysqli("localhost", "root", "", "email_db");
+        $conn = new mysqli("sql113.infinityfree.com","if0_41747456","ryH6NrJNuBGHCR","if0_41747456_email_db");
         
         if ($conn->connect_error) {
             $error = "Connection failed: " . $conn->connect_error;

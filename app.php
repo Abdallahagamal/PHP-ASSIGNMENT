@@ -258,98 +258,6 @@ function renderPreview(body) {
     return text.length > 60 ? `${text.slice(0, 60)}...` : text;
 }
 
-function sendCompose(event) {
-    event.preventDefault();
-
-    const toInput = document.getElementById('composeTo');
-    const emailInput = document.getElementById('composeEmail');
-    const subjectInput = document.getElementById('composeSubject');
-    const bodyInput = document.getElementById('composeBody');
-    const tbody = document.getElementById('emailBody');
-
-    if (!toInput || !emailInput || !subjectInput || !bodyInput || !tbody) return;
-
-    const toName = toInput.value.trim();
-    const toEmail = emailInput.value.trim();
-    const subject = subjectInput.value.trim();
-    const body = bodyInput.value.trim();
-    if (!toName || !toEmail || !subject || !body) return;
-
-    const idSeed = Date.now();
-    const messageId = `sent-${idSeed}`;
-    const threadId = idSeed;
-    const time = buildTimeLabel();
-    const initials = buildInitials(toName);
-
-    const newMessage = {
-        messageId,
-        threadId,
-        type: 'sent',
-        to: toName,
-        toEmail,
-        toInitials: initials,
-        subject,
-        body,
-        time,
-        status: 'New',
-        assigned: 'You',
-        thread: [
-            {
-                from: 'You',
-                body,
-                time,
-            },
-        ],
-    };
-
-    messageData.unshift(newMessage);
-    messageMap.set(String(messageId), newMessage);
-    threadMap.set(threadId, [newMessage]);
-
-    const safeMessageId = escapeHtml(messageId);
-    const rowHtml = `
-        <tr class="row-hover border-b border-slate-100 cursor-pointer transition-colors hover:bg-slate-50"
-            data-id="${safeMessageId}"
-            data-thread-id="${threadId}"
-            data-subject="${escapeHtml(subject.toLowerCase())}"
-            data-from="${escapeHtml(toName.toLowerCase())}"
-            data-body="${escapeHtml(body.toLowerCase())}"
-            onclick="handleRowClick(event, '${safeMessageId}')">
-            <td class="px-4 py-4 w-10" onclick="event.stopPropagation()">
-                <input type="checkbox" class="check-row rounded" onchange="toggleRow('${safeMessageId}', this)">
-            </td>
-            <td class="px-4 py-4 w-40">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 bg-slate-900 text-white">
-                        ${escapeHtml(initials)}
-                    </div>
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-1">
-                            <span class="font-medium text-slate-800 text-sm truncate">${escapeHtml(toName)}</span>
-                        </div>
-                        <div class="text-xs text-slate-400 truncate">${escapeHtml(toEmail)}</div>
-                    </div>
-                </div>
-            </td>
-            <td class="px-4 py-4 flex-1">
-                <div class="font-medium text-slate-800 text-sm truncate mb-1">${escapeHtml(subject)}</div>
-                <div class="text-sm text-slate-600 truncate"><span class="text-slate-400 font-medium">You: </span>${escapeHtml(renderPreview(body))}</div>
-            </td>
-            <td class="px-4 py-4 w-24">
-                <span class="text-xs text-slate-400">${escapeHtml(time)}</span>
-            </td>
-        </tr>
-    `;
-
-    tbody.insertAdjacentHTML('afterbegin', rowHtml);
-
-    const composeForm = document.getElementById('composeForm');
-    if (composeForm) composeForm.reset();
-
-    closeComposeModal();
-    updateFilteredView();
-}
-
 function sendReply(event) {
     event.preventDefault();
 
@@ -389,7 +297,14 @@ function sendReply(event) {
     .then(data => {
         if (data.message !== "Reply added") {
             alert("Error: " + data.message);
+            return;
         }
+        const row = document.querySelector(`tr[data-thread-id="${activeThreadId}"]`);
+        if (row) {
+            const preview = row.querySelector('td:nth-child(3) div:last-child');
+            if (preview) {
+                preview.innerHTML = `<span class="text-slate-400">You: </span>${messageBody.substring(0,50)}`;
+        }   }
     })
     .catch(console.error);
 }
@@ -402,30 +317,129 @@ function setActive(el) {
 
 
 
+//////////////////////////////////
+function renderEmails(emails) {
+    const tbody = document.getElementById('emailBody');
+    tbody.innerHTML = '';
+
+    const avatarColors = [
+        'bg-violet-100 text-violet-700',
+        'bg-blue-100 text-blue-700',
+        'bg-rose-100 text-rose-700',
+        'bg-teal-100 text-teal-700',
+        'bg-amber-100 text-amber-700',
+        'bg-emerald-100 text-emerald-700',
+    ];
+
+    const chatsMap = {};
+
+    emails.forEach(email => {
+        if (!chatsMap[email.chat_id]) {
+            chatsMap[email.chat_id] = email;
+        }
+    });
+
+    const chats = Object.values(chatsMap);
+
+    chats.forEach((email, index) => {
+        const avatarClass = avatarColors[index % avatarColors.length];
+        const initials = buildInitials(email.sender_name);
+
+        const isSent = (email.sender_email === window.userEmail);
+        const contactName = isSent ? (email.recipient_name || 'Recipient') : email.sender_name;
+        const contactEmail = isSent ? (email.recipient_email || '') : email.sender_email;
+        const previewPrefix = isSent ? 'You' : email.sender_name;
+
+        const rowHtml = `
+        <tr class="row-hover border-b border-slate-100 cursor-pointer hover:bg-slate-50"
+            data-id="${email.id}"
+            data-thread-id="${email.chat_id}"
+            data-subject="${escapeHtml((email.subject || '').toLowerCase())}"
+            data-from="${escapeHtml((contactName || '').toLowerCase())}"
+            data-body="${escapeHtml((email.message || '').toLowerCase())}"
+            onclick="handleRowClick(event, '${email.id}')">
+
+            <td class="px-4 py-4 w-10" onclick="event.stopPropagation()">
+                <input type="checkbox" class="check-row rounded" onchange="toggleRow('${email.id}', this)">
+            </td>
+
+            <td class="px-4 py-4 w-40">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${avatarClass}">
+                        ${escapeHtml(initials)}
+                    </div>
+                    <div class="min-w-0">
+                        <span class="font-medium text-slate-800 text-sm truncate">${escapeHtml(contactName)}</span>
+                        <div class="text-xs text-slate-400 truncate">${escapeHtml(contactEmail)}</div>
+                    </div>
+                </div>
+            </td>
+
+            <td class="px-4 py-4 flex-1">
+                <div class="font-medium text-sm truncate mb-1">${escapeHtml(email.subject)}</div>
+                <div class="text-sm text-slate-600 truncate">
+                    <span class="text-slate-400">${escapeHtml(previewPrefix)}: </span>
+                    ${escapeHtml(renderPreview(email.message))}
+                </div>
+            </td>
+
+            <td class="px-4 py-4 w-24">
+                <span class="text-xs text-slate-400">${escapeHtml(email.sent_at)}</span>
+            </td>
+        </tr>
+        `;
+
+        tbody.insertAdjacentHTML('beforeend', rowHtml);
+    });
+
+    selectedRows.clear();
+    updateFilteredView();
+    updateBulkBar();
+}
+//////////////////////////////////
+
+
 
 document.getElementById("composeForm").addEventListener("submit", function(e){
     e.preventDefault();
 
-    let data = {
-        composeEmail: document.getElementById('composeEmail').value,
-        composeSubject: document.getElementById('composeSubject').value,
-        composeBody: document.getElementById('composeBody').value
-    };
+    let toEmail = document.getElementById('composeEmail').value.trim();
+    let subject = document.getElementById('composeSubject').value.trim();
+    let body = document.getElementById('composeBody').value.trim();
+
+    if (!toEmail || !subject || !body) return;
 
     fetch("DB_Ops.php?action=add", {
         method: "POST",
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+            composeEmail: toEmail,
+            composeSubject: subject,
+            composeBody: body
+        })
     })
     .then(res => res.json())
     .then(data => {
-        console.log(data);
-        alert(data.message);
+        if (data.message !== "Email added") {
+            alert(data.message);
+            return;
+        }
+        // Reload the table to reflect the new email with correct names and colors
+        fetch('DB_Ops.php?action=read')
+        .then(res => res.json())
+        .then(emails => {
+            renderEmails(emails);
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Error reloading messages");
+        });
+
+        document.getElementById("composeForm").reset();
         closeComposeModal();
     })
     .catch(console.error);
 });
-
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -433,29 +447,39 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBulkBar();
 
     // Delete selected messages
-    const deleteBtn = document.getElementById('deleteBtn');
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => {
-            if (selectedRows.size === 0) {
-                alert('No messages selected');
-                return;
-            }
-            const ids = Array.from(selectedRows).join(',');
-            fetch(`DB_Ops.php?action=delete&id=${ids}`)
-                .then(res => res.json())
-                .then(data => {
-                    alert(data.message);
-                    selectedRows.clear();
-                    updateFilteredView();
-                    updateBulkBar();
-                })
-                .catch(error => {
-                    console.error(error);
-                    alert('Error: ' + error.message);
-                });
-        });
-    }
+const deleteBtn = document.getElementById('deleteBtn');
 
+if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+
+        if (selectedRows.size === 0) {
+            alert('No messages selected');
+            return;
+        }
+
+        const ids = Array.from(selectedRows).join(',');
+
+        fetch(`DB_Ops.php?action=delete&id=${ids}`)
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            // Reload the table to reflect deletions
+            fetch('DB_Ops.php?action=read')
+            .then(res => res.json())
+            .then(emails => {
+                renderEmails(emails);
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error reloading messages");
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Error deleting messages");
+        });
+    });
+}
     const dialog = document.getElementById('messageDialog');
     if (dialog) {
         dialog.addEventListener('click', event => {

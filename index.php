@@ -128,7 +128,9 @@ $avatarColors = [
                 <h1 class="text-2xl font-semibold text-slate-900">Messages</h1>
                 <p class="text-sm text-slate-400 mt-0.5" id="conv-count"><?php echo count($emails); ?> messages</p>
             </div>
-            <div class="flex items-center"></div>
+            <div class="flex items-center">
+                <div id="weatherBox">Loading weather...</div>
+            </div>
         </div>
 
         <!-- Search and filter controls -->
@@ -239,7 +241,7 @@ $avatarColors = [
     </svg>
     Compose
 </button>
-
+  
 //compose modal
 <dialog id="composeDialog" aria-labelledby="composeDialogTitle" class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-slate-900/45 backdrop:backdrop-blur-sm">
     <div class="flex min-h-full items-end justify-end p-4 sm:items-end sm:justify-end sm:p-7">
@@ -310,6 +312,45 @@ $avatarColors = [
 
 <script>
 window.emailData = <?php echo json_encode($emails, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+window.userEmail = <?php echo json_encode($my_email, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+</script>
+
+<script>
+// Load weather data when page loads
+async function loadWeather() {
+    try {
+        const response = await fetch('API_Ops.php');
+        const data = await response.json();
+
+        if (data.error) {
+            document.getElementById("weatherBox").innerHTML = `
+                <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
+                    Error: ${data.error}
+                </div>
+            `;
+        } else {
+            document.getElementById("weatherBox").innerHTML = `
+                <div class="p-3 bg-slate-100 rounded-xl">
+                    🌤 <b>${data.name}</b><br>
+                    Temp: ${data.temp}°C<br>
+                    ${data.description}<br>
+                    Humidity: ${data.humidity}%<br>
+                    Wind: ${data.wind_speed} m/s
+                </div>
+            `;
+        }
+    } catch (err) {
+        console.error('Weather loading error:', err);
+        document.getElementById("weatherBox").innerHTML = `
+            <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
+                Unable to load weather data
+            </div>
+        `;
+    }
+}
+
+// Load weather when page loads
+document.addEventListener('DOMContentLoaded', loadWeather);
 </script>
 
 <script src="app.php"></script>
